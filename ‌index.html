@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EA Egypt — Youth Fellowship Application</title>
+<style>
+  :root{
+    --navy: #12233F;
+    --navy-2: #1E3A5F;
+    --cream: #FAF8F3;
+    --paper: #F4F1E9;
+    --muted: #5E6B7A;
+    --gold: #B98A2E;
+    --line: #D9D3C4;
+    --warn: #A8482B;
+    --ok: #3E6B4F;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "URW Palladio L", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--cream);
+    color:var(--navy);
+    font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+
+  #app{
+    position:relative;
+    width:100%;
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* Progress rail */
+  .rail{
+    position:relative;
+    height:44px;
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    padding:0 clamp(20px,5vw,64px);
+    border-bottom:1px solid var(--line);
+    opacity:0;
+    transition:opacity .4s ease;
+  }
+  .rail.show{opacity:1;}
+  .rail-track{
+    position:relative;
+    flex:1;
+    height:1px;
+    background:var(--line);
+  }
+  .rail-fill{
+    position:absolute;
+    top:0; left:0; height:1px;
+    background:var(--navy);
+    transition:width .5s cubic-bezier(.65,0,.35,1);
+  }
+  .rail-ticks{
+    position:absolute; top:-3px; left:0; right:0;
+    display:flex; justify-content:space-between;
+    pointer-events:none;
+  }
+  .rail-ticks span{
+    width:1px; height:7px; background:var(--line);
+  }
+  .rail-ticks span.done{ background:var(--navy); }
+  .rail-label{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.06em;
+    color:var(--muted);
+    margin-left:20px;
+    white-space:nowrap;
+  }
+
+  /* Screens */
+  .stage{
+    flex:1 1 auto;
+    position:relative;
+    overflow:hidden;
+  }
+  .screen{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:6vh clamp(24px,8vw,120px);
+    opacity:0;
+    transform:translateY(14px);
+    transition:opacity .45s ease, transform .45s ease;
+    pointer-events:none;
+    overflow-y:auto;
+  }
+  .screen.active{
+    opacity:1;
+    transform:translateY(0);
+    pointer-events:auto;
+  }
+  .screen.leaving{
+    opacity:0;
+    transform:translateY(-14px);
+  }
+
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:18px;
+  }
+
+  .ghost-num{
+    position:absolute;
+    top:2vh;
+    right:clamp(24px,6vw,90px);
+    font-family:var(--serif);
+    font-size:min(22vw,220px);
+    line-height:1;
+    color:var(--navy);
+    opacity:.045;
+    font-style:italic;
+    pointer-events:none;
+    user-select:none;
+  }
+
+  h1.hero{
+    font-family:var(--serif);
+    font-weight:400;
+    font-size:clamp(28px,4.2vw,46px);
+    line-height:1.18;
+    max-width:16ch;
+    margin:0 0 22px 0;
+    color:var(--navy);
+  }
+  p.sub{
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.65;
+    color:var(--muted);
+    max-width:56ch;
+    margin:0 0 30px 0;
+  }
+
+  .rules{
+    list-style:none;
+    padding:0; margin:0 0 40px 0;
+    max-width:56ch;
+    border-top:1px solid var(--line);
+  }
+  .rules li{
+    font-size:14.5px;
+    color:var(--navy-2);
+    padding:13px 0;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    gap:14px;
+  }
+  .rules li::before{
+    content:"—";
+    color:var(--gold);
+    flex:0 0 auto;
+  }
+
+  .btn{
+    font-family:var(--sans);
+    font-size:14.5px;
+    font-weight:600;
+    letter-spacing:.01em;
+    border:1px solid var(--navy);
+    background:var(--navy);
+    color:var(--cream);
+    padding:14px 30px;
+    cursor:pointer;
+    border-radius:2px;
+    transition:background .2s ease, color .2s ease, opacity .2s ease, transform .1s ease;
+  }
+  .btn:hover{background:var(--navy-2); border-color:var(--navy-2);}
+  .btn:active{transform:translateY(1px);}
+  .btn:disabled{
+    opacity:.35;
+    cursor:not-allowed;
+    background:var(--navy);
+  }
+  .btn.ghost{
+    background:transparent;
+    color:var(--navy);
+    border:1px solid var(--line);
+  }
+  .btn.ghost:hover{border-color:var(--navy); background:transparent;}
+
+  .row-actions{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    margin-top:8px;
+  }
+  .hint{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--muted);
+    letter-spacing:.03em;
+  }
+
+  /* Acknowledgment screen */
+  .ack-box{
+    max-width:62ch;
+    border:1px solid var(--line);
+    background:var(--paper);
+    padding:26px 28px;
+    margin:26px 0 32px 0;
+  }
+  .ack-box p{
+    font-family:var(--serif);
+    font-style:italic;
+    font-size:16.5px;
+    line-height:1.7;
+    color:var(--navy-2);
+    margin:0;
+  }
+  .check-row{
+    display:flex;
+    align-items:flex-start;
+    gap:14px;
+    max-width:62ch;
+    margin-bottom:34px;
+    cursor:pointer;
+  }
+  .check-row input{
+    appearance:none;
+    -webkit-appearance:none;
+    width:20px; height:20px;
+    flex:0 0 auto;
+    margin-top:2px;
+    border:1.5px solid var(--navy);
+    background:var(--cream);
+    cursor:pointer;
+    position:relative;
+    border-radius:2px;
+  }
+  .check-row input:checked{ background:var(--navy); }
+  .check-row input:checked::after{
+    content:"";
+    position:absolute;
+    left:6px; top:2px;
+    width:5px; height:10px;
+    border:solid var(--cream);
+    border-width:0 2px 2px 0;
+    transform:rotate(45deg);
+  }
+  .check-row label{
+    font-size:14.5px;
+    color:var(--navy);
+    line-height:1.55;
+    cursor:pointer;
+  }
+
+  /* Question screens */
+  .q-meta{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    margin-bottom:20px;
+  }
+  .tag{
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--navy-2);
+    border:1px solid var(--line);
+    padding:4px 9px;
+  }
+  .tag.req{ color:var(--warn); border-color:var(--warn); }
+  .tag.opt{ color:var(--muted); }
+
+  h2.q-title{
+    font-family:var(--serif);
+    font-weight:400;
+    font-size:clamp(22px,2.6vw,30px);
+    line-height:1.4;
+    max-width:42ch;
+    margin:0 0 28px 0;
+    color:var(--navy);
+  }
+
+  textarea{
+    width:100%;
+    max-width:66ch;
+    min-height:150px;
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.6;
+    color:var(--navy);
+    background:transparent;
+    border:none;
+    border-bottom:1.5px solid var(--line);
+    padding:6px 2px 16px 2px;
+    resize:vertical;
+    outline:none;
+    transition:border-color .2s ease;
+  }
+  textarea:focus{ border-bottom-color:var(--navy); }
+  textarea::placeholder{ color:#B7AF9C; font-style:italic; }
+
+  .meta-row{
+    display:flex;
+    justify-content:space-between;
+    max-width:66ch;
+    margin-top:10px;
+    margin-bottom:30px;
+  }
+  .wc{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--muted);
+    letter-spacing:.02em;
+  }
+  .wc.warn{ color:var(--warn); }
+  .wc.ok{ color:var(--ok); }
+
+  /* Closing */
+  .close-mark{
+    width:34px; height:1px;
+    background:var(--gold);
+    margin-bottom:26px;
+  }
+
+  @media (max-width:640px){
+    .ghost-num{ display:none; }
+    .rules li{ font-size:13.5px; }
+  }
+
+  .sr-only{
+    position:absolute; width:1px; height:1px;
+    overflow:hidden; clip:rect(0,0,0,0);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="rail" id="rail">
+    <span class="rail-label" id="railLabel">00 / 10</span>
+    <div class="rail-track">
+      <div class="rail-fill" id="railFill"></div>
+      <div class="rail-ticks" id="railTicks"></div>
+    </div>
+  </div>
+  <div class="stage" id="stage"></div>
+</div>
+
+<script>
+(function(){
+
+  // Applications are sent via the applicant's own email app, addressed here.
+  var SUBMIT_EMAIL = "ibramhanyibrahemlouka@gmail.com";
+
+  var QUESTIONS = [
+    {
+      type: "Short answer", required: true,
+      title: "You have EGP 10,000 to donate. Option A saves one person in your neighborhood from a serious illness with certainty. Option B funds a program abroad that statistically saves 10 lives, but you will never know if it worked or who was helped.",
+      prompt: "Which do you choose and why? What makes this decision genuinely difficult?"
+    },
+    {
+      type: "Short answer", required: true,
+      title: "A classmate tells you: “There's no point donating small amounts of money — it's a drop in the ocean and won't actually change anything.”",
+      prompt: "Make the strongest possible case for their view. Then explain where you think they are wrong — or right."
+    },
+    {
+      type: "Short answer", required: true,
+      title: "Two charities both say they help children in poverty. Charity A spends EGP 500 to provide a child with school supplies and a mentor for one year. Charity B spends EGP 500 on a medical treatment that prevents a disease causing permanent disability — but the child is in another country and you will never meet them.",
+      prompt: "Which charity would you give to, and what information — if any — would change your answer?"
+    },
+    {
+      type: "Short answer", required: true,
+      title: "You read two news articles. The first says a new study found that tutoring programs improve student grades significantly. The second says a larger study found the opposite. Both studies are from reputable universities.",
+      prompt: "How do you decide what to believe? What questions would you ask before accepting either finding?"
+    },
+    {
+      type: "Long answer", required: true,
+      title: "List what you think are the three most important problems in the world right now.",
+      prompt: "For each one, explain in one sentence why you chose it over everything else you did not list."
+    },
+    {
+      type: "Short answer", required: true,
+      title: "Imagine you will dedicate your entire career to solving one problem. The problem you care most about personally has a 1% chance of meaningful progress in your lifetime. A different problem you care about less has an 80% chance of meaningful progress if you work on it.",
+      prompt: "Which do you choose? Does the probability matter morally?"
+    },
+    {
+      type: "Short answer", required: true,
+      title: "Describe a time you changed your mind about something you previously believed strongly.",
+      prompt: "What caused the change, and how did it feel?"
+    },
+    {
+      type: "Short answer", required: true,
+      title: "What is something you believe that most people around you disagree with?",
+      prompt: "Why do you hold this view despite the disagreement?"
+    },
+    {
+      type: "Long answer", required: true,
+      title: "Why do you want to spend 8 weeks on a fellowship about global ethics and impact?",
+      prompt: "What are you hoping will change in how you think or act as a result?"
+    },
+    {
+      type: "Long answer", required: false,
+      title: "Is there anything about how you think about the world — a framework, a value, a question you keep returning to — that makes you a good fit for this fellowship?",
+      prompt: "Use this space for anything the previous questions did not give you room to express."
+    }
+  ];
+
+  var TOTAL = QUESTIONS.length;
+  var state = { screen: 0, ack: false, answers: new Array(TOTAL).fill("") };
+  var stage = document.getElementById('stage');
+  var rail = document.getElementById('rail');
+  var railFill = document.getElementById('railFill');
+  var railTicks = document.getElementById('railTicks');
+  var railLabel = document.getElementById('railLabel');
+
+  // build ticks
+  for (var t=0; t<TOTAL; t++){
+    var s = document.createElement('span');
+    railTicks.appendChild(s);
+  }
+
+  // screen indices: 0 welcome, 1 ack, 2..11 questions, 12 closing
+  var SEND_SCREEN = 2 + TOTAL;   // "open email to submit" screen
+  var LAST = 3 + TOTAL;          // final closing screen (exact spec text)
+
+  function countWords(str){
+    str = str.trim();
+    if(!str) return 0;
+    return str.split(/\s+/).length;
+  }
+
+  function updateRail(){
+    if(state.screen < 1 || state.screen > 1+TOTAL){
+      rail.classList.remove('show');
+      return;
+    }
+    rail.classList.add('show');
+    var qIndex = state.screen === 1 ? 0 : state.screen - 1; // ack counts as position 0
+    var pct = (qIndex / TOTAL) * 100;
+    railFill.style.width = pct + '%';
+    railLabel.textContent = (qIndex < 10 ? '0'+qIndex : qIndex) + ' / ' + TOTAL;
+    var ticks = railTicks.children;
+    for(var i=0;i<ticks.length;i++){
+      ticks[i].classList.toggle('done', i < qIndex);
+    }
+  }
+
+  function render(){
+    stage.innerHTML = '';
+    var el = document.createElement('div');
+    el.className = 'screen active';
+
+    if(state.screen === 0){
+      el.innerHTML =
+        '<div class="eyebrow">Effective Altruism Egypt</div>' +
+        '<h1 class="hero">Youth Fellowship Application</h1>' +
+        '<p class="sub">This is a competitive, 8-week fellowship on global ethics, evidence-based thinking, and high-impact decision making. Seats are extremely limited. Read every question carefully before answering.</p>' +
+        '<div class="row-actions"><button class="btn" id="startBtn">Begin application</button>' +
+        '<span class="hint">~10 questions · 20–30 minutes</span></div>';
+    }
+    else if(state.screen === 1){
+      el.innerHTML =
+        '<div class="eyebrow">Before you begin</div>' +
+        '<h2 class="q-title">Please read this carefully.</h2>' +
+        '<ul class="rules">' +
+          '<li>Answer every question in your own words</li>' +
+          '<li>There are no correct answers — we are evaluating how you think, not what you know</li>' +
+          '<li>Word limit per answer: 150–250 words</li>' +
+          '<li>AI use is strictly forbidden and will be detected</li>' +
+        '</ul>' +
+        '<div class="ack-box"><p>“I confirm that every answer in this application is entirely my own work. I have not used AI tools (including ChatGPT, Claude, or any other AI assistant) to write or assist any response. I understand that all submissions will be processed through AI detection software, and that any detected AI use will result in immediate disqualification.”</p></div>' +
+        '<div class="check-row" id="checkRow">' +
+          '<input type="checkbox" id="ackBox" ' + (state.ack ? 'checked' : '') + '>' +
+          '<label for="ackBox">I have read and agree to the statement above.</label>' +
+        '</div>' +
+        '<div class="row-actions"><button class="btn ghost" id="backBtn">Back</button>' +
+        '<button class="btn" id="continueBtn" ' + (state.ack ? '' : 'disabled') + '>Continue</button></div>';
+    }
+    else if(state.screen >= 2 && state.screen <= 1+TOTAL){
+      var qi = state.screen - 2;
+      var q = QUESTIONS[qi];
+      el.innerHTML =
+        '<div class="ghost-num">' + (qi<9?'0':'') + (qi+1) + '</div>' +
+        '<div class="q-meta">' +
+          '<span class="tag">' + q.type + '</span>' +
+          '<span class="tag ' + (q.required ? 'req' : 'opt') + '">' + (q.required ? 'Required' : 'Optional') + '</span>' +
+        '</div>' +
+        '<h2 class="q-title">' + q.title + '</h2>' +
+        '<p class="sub" style="margin-bottom:16px;max-width:60ch;">' + q.prompt + '</p>' +
+        '<textarea id="answerBox" placeholder="Type your answer here…">' + (state.answers[qi]||'') + '</textarea>' +
+        '<div class="meta-row"><span class="wc" id="wcLabel"></span><span class="hint">Question ' + (qi+1) + ' of ' + TOTAL + '</span></div>' +
+        '<div class="row-actions"><button class="btn ghost" id="backBtn">Back</button>' +
+        '<button class="btn" id="continueBtn">' + (qi === TOTAL-1 ? 'Review & submit' : 'Continue') + '</button></div>';
+    }
+    else if(state.screen === SEND_SCREEN){
+      el.innerHTML =
+        '<div class="close-mark"></div>' +
+        '<div class="eyebrow">Almost done</div>' +
+        '<h1 class="hero" style="max-width:20ch;">One last step.</h1>' +
+        '<p class="sub">Click below to open your email app with your answers already filled in, addressed to the fellowship team. Review it, then hit send from your own inbox.</p>' +
+        '<div class="row-actions"><button class="btn ghost" id="backBtn">Back</button>' +
+        '<button class="btn" id="sendBtn">Open email to submit</button></div>' +
+        '<p class="hint" id="sentNote" style="margin-top:22px;display:none;">If your email app did not open, your device may not have a default email app configured — email your answers manually to ' + SUBMIT_EMAIL + '.</p>';
+    }
+    else if(state.screen === LAST){
+      el.innerHTML =
+        '<div class="close-mark"></div>' +
+        '<div class="eyebrow">Application received</div>' +
+        '<h1 class="hero" style="max-width:20ch;">Application Submitted</h1>' +
+        '<p class="sub">Thank you for applying to the EA Egypt Youth Fellowship. We review every application carefully. If you are selected to move forward, you will hear from us within 3 weeks. Please do not follow up before that window has passed.</p>';
+    }
+
+    stage.appendChild(el);
+    wireScreen(qCurrentIndex());
+    updateRail();
+  }
+
+  function qCurrentIndex(){
+    if(state.screen>=2 && state.screen<=1+TOTAL) return state.screen-2;
+    return -1;
+  }
+
+  function goTo(n){
+    if(n<0 || n>LAST) return;
+    state.screen = n;
+    render();
+    window.scrollTo(0,0);
+  }
+
+  function buildMailto(){
+    var lines = [];
+    QUESTIONS.forEach(function(q, i){
+      lines.push('Q' + (i+1) + '. ' + q.title);
+      lines.push(state.answers[i] && state.answers[i].trim() ? state.answers[i].trim() : '(left blank)');
+      lines.push('');
+    });
+    var subject = "EA Egypt Fellowship Application";
+    var body = lines.join('\n');
+    return 'mailto:' + encodeURIComponent(SUBMIT_EMAIL) +
+      '?subject=' + encodeURIComponent(subject) +
+      '&body=' + encodeURIComponent(body);
+  }
+
+  function wireScreen(qi){
+    var startBtn = document.getElementById('startBtn');
+    if(startBtn){ startBtn.addEventListener('click', function(){ goTo(1); }); }
+
+    var backBtn = document.getElementById('backBtn');
+    if(backBtn){ backBtn.addEventListener('click', function(){ goTo(state.screen-1); }); }
+
+    var ackBox = document.getElementById('ackBox');
+    var continueBtn = document.getElementById('continueBtn');
+
+    if(ackBox){
+      ackBox.addEventListener('change', function(){
+        state.ack = ackBox.checked;
+        continueBtn.disabled = !state.ack;
+      });
+      var checkRow = document.getElementById('checkRow');
+      checkRow.addEventListener('click', function(e){
+        if(e.target.tagName.toLowerCase() !== 'input'){
+          ackBox.checked = !ackBox.checked;
+          state.ack = ackBox.checked;
+          continueBtn.disabled = !state.ack;
+        }
+      });
+    }
+
+    if(qi >= 0){
+      var box = document.getElementById('answerBox');
+      var wc = document.getElementById('wcLabel');
+      function refreshCount(){
+        var n = countWords(box.value);
+        var label = n + ' word' + (n===1?'':'s');
+        var cls = 'wc';
+        if(n>0 && n<150){ cls += ' warn'; label += ' — below 150'; }
+        else if(n>250){ cls += ' warn'; label += ' — over 250'; }
+        else if(n>=150 && n<=250){ cls += ' ok'; label += ' — within range'; }
+        wc.textContent = label;
+        wc.className = cls;
+      }
+      box.addEventListener('input', function(){
+        state.answers[qi] = box.value;
+        refreshCount();
+      });
+      refreshCount();
+    }
+
+    if(continueBtn && state.screen !== 1){
+      continueBtn.addEventListener('click', function(){
+        goTo(state.screen+1);
+      });
+    } else if(continueBtn && state.screen === 1){
+      continueBtn.addEventListener('click', function(){
+        if(state.ack) goTo(state.screen+1);
+      });
+    }
+
+    var sendBtn = document.getElementById('sendBtn');
+    if(sendBtn){
+      sendBtn.addEventListener('click', function(){
+        window.location.href = buildMailto();
+        document.getElementById('sentNote').style.display = 'block';
+        setTimeout(function(){ goTo(LAST); }, 900);
+      });
+    }
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
